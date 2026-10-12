@@ -24,4 +24,9 @@ title: 'Página no encontrada',
 loadComponent: () =>
 import('./shared/pages/no-encontrado/no-encontrado').then(m => m.NoEncontrado),
 },
+{
+  path: 'clientes',
+  loadChildren: () =>
+    import('./features/clientes/clientes.routes').then((m) => m.CLIENTES_ROUTES),
+},
 ];
