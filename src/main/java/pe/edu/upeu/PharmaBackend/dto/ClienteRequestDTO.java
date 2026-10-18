@@ -53,5 +53,4 @@ public class ClienteRequestDTO {
 
     @NotNull(message = "El estado es obligatorio")
     private Boolean estado;
-
 }

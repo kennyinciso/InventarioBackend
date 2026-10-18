@@ -2,11 +2,12 @@ package pe.edu.upeu.PharmaBackend.service.impl;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.data.domain.Sort;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import pe.edu.upeu.PharmaBackend.dto.DetalleVentaRequestDTO;
-import pe.edu.upeu.PharmaBackend.dto.DetalleVentaResponseDTO;
+import pe.edu.upeu.PharmaBackend.dto.PaginaResponseDTO;
 import pe.edu.upeu.PharmaBackend.dto.VentaRequestDTO;
 import pe.edu.upeu.PharmaBackend.dto.VentaResponseDTO;
 import pe.edu.upeu.PharmaBackend.entity.Cliente;
@@ -16,42 +17,66 @@ import pe.edu.upeu.PharmaBackend.entity.Venta;
 import pe.edu.upeu.PharmaBackend.enums.EstadoVenta;
 import pe.edu.upeu.PharmaBackend.exception.RecursosNoEncontradoException;
 import pe.edu.upeu.PharmaBackend.exception.ReglaNegocioException;
+import pe.edu.upeu.PharmaBackend.mapper.VentaMapper;
 import pe.edu.upeu.PharmaBackend.repository.ClienteRepository;
 import pe.edu.upeu.PharmaBackend.repository.ProductoRepository;
 import pe.edu.upeu.PharmaBackend.repository.VentaRepository;
 import pe.edu.upeu.PharmaBackend.service.service.VentaService;
+import pe.edu.upeu.PharmaBackend.util.PaginacionUtil;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
-import java.util.List;
 import java.util.Set;
+
 
 @Service
 public class VentaServiceImpl implements VentaService {
-    private static final Logger log = LoggerFactory.getLogger(VentaServiceImpl.class);
+
+    private static final Logger log =
+            LoggerFactory.getLogger(VentaServiceImpl.class);
+
+    /*
+     * Lista blanca de campos por los que se permite ordenar la
+     * búsqueda. Cualquier otro valor se rechaza con 409 para no
+     * exponer la estructura interna de la entidad ni permitir
+     * ordenamientos arbitrarios.
+     */
+    private static final Set<String> CAMPOS_ORDENABLES =
+            Set.of("id", "fecha", "total", "estado");
+
+    private static final String ORDEN_POR_DEFECTO = "fecha";
 
     private final VentaRepository ventaRepository;
     private final ClienteRepository clienteRepository;
     private final ProductoRepository productoRepository;
-
-    private static final Set<String> CAMPOS_ORDENABLES = Set.of("id", "fecha", "total", "estado");
-    private static final String ORDEN_POR_DEFECTO = "fecha";
+    private final VentaMapper ventaMapper;
 
     public VentaServiceImpl(
             VentaRepository ventaRepository,
             ClienteRepository clienteRepository,
-            ProductoRepository productoRepository) {
+            ProductoRepository productoRepository,
+            VentaMapper ventaMapper) {
 
         this.ventaRepository = ventaRepository;
         this.clienteRepository = clienteRepository;
         this.productoRepository = productoRepository;
+        this.ventaMapper = ventaMapper;
     }
 
     @Override
     @Transactional
     public VentaResponseDTO registrar(VentaRequestDTO request) {
+
+        long inicio = System.currentTimeMillis();
+
+        log.info("Inicio registrar venta | clienteId={} | items={}",
+                request.getClienteId(),
+                request.getDetalles() == null
+                        ? 0
+                        : request.getDetalles().size());
+
         Cliente cliente = clienteRepository.findById(request.getClienteId())
                 .orElseThrow(() ->new RecursosNoEncontradoException("Cliente no encontrado con id: "+ request.getClienteId()));
 
@@ -61,7 +86,7 @@ public class VentaServiceImpl implements VentaService {
         Venta venta = new Venta();
 
         venta.setCliente(cliente);
-        venta.setFechaRegistro(LocalDateTime.now());
+        venta.setFecha(LocalDateTime.now());
         venta.setEstado(EstadoVenta.REGISTRADA);
 
         BigDecimal total = BigDecimal.ZERO;
@@ -74,7 +99,18 @@ public class VentaServiceImpl implements VentaService {
                 throw new ReglaNegocioException("El producto "+ producto.getNombre()+ " se encuentra inactivo");
             }
 
-            if (producto.getStock()< item.getCantidad()) {
+            /*
+             * El descuento es un UPDATE condicional en la base (ver
+             * ProductoRepository.descontarStock): si devuelve 0 es que
+             * otra venta se llevó el stock entre la lectura y este
+             * punto, o simplemente no alcanzaba. La excepción revierte
+             * toda la transacción, incluidos los descuentos de los
+             * ítems anteriores.
+             */
+            int filas = productoRepository.descontarStock(
+                    producto.getId(), item.getCantidad());
+
+            if (filas == 0) {
 
                 throw new ReglaNegocioException("Stock insuficiente para "+ producto.getNombre()+ ". Disponible: "+ producto.getStock()
                         + ", solicitado: "+ item.getCantidad());
@@ -92,47 +128,69 @@ public class VentaServiceImpl implements VentaService {
             venta.agregarDetalle(detalle);
 
             total = total.add(subtotal);
-
-            producto.setStock(producto.getStock()- item.getCantidad());
         }
 
         venta.setTotal(total);
 
         Venta guardada =ventaRepository.save(venta);
 
-        return convertirResponse(guardada);
+        log.info("Fin registrar venta | ventaId={} | total={} | "
+                        + "filas={} | duracionMs={}",
+                guardada.getId(),
+                guardada.getTotal(),
+                guardada.getDetalles().size(),
+                System.currentTimeMillis() - inicio);
+
+        return ventaMapper.toResponse(guardada);
     }
 
     @Override
     @Transactional(readOnly = true)
     public VentaResponseDTO buscar(Long id) {
 
+        long inicio = System.currentTimeMillis();
+        log.info("Inicio buscar venta por id | id={}", id);
+
         Venta venta = ventaRepository.findById(id).orElseThrow(() ->
                 new RecursosNoEncontradoException("Venta no encontrada con id: "+ id));
-        return convertirResponse(venta);
+
+        log.info("Fin buscar venta por id | id={} | filas={} | duracionMs={}",
+                id, 1, System.currentTimeMillis() - inicio);
+
+        return ventaMapper.toResponse(venta);
     }
 
     @Override
     @Transactional(readOnly = true)
-    public List<VentaResponseDTO> listar() {
-        return ventaRepository.findAll().stream().map(this::convertirResponse).toList();
+    public PaginaResponseDTO<VentaResponseDTO> listar(
+            int pagina,
+            int tamanio,
+            String ordenarPor,
+            String direccion) {
+
+        return buscar(null, null, null, null,
+                pagina, tamanio, ordenarPor, direccion);
     }
 
     @Override
     @Transactional(readOnly = true)
-    public List<VentaResponseDTO> buscarVentas(
+    public PaginaResponseDTO<VentaResponseDTO> buscar(
             Long clienteId,
             EstadoVenta estado,
             LocalDate desde,
             LocalDate hasta,
+            int pagina,
+            int tamanio,
             String ordenarPor,
             String direccion) {
 
         long inicio = System.currentTimeMillis();
 
         log.info("Inicio buscar ventas | clienteId={} | estado={} | "
-                        + "desde={} | hasta={} | ordenarPor={} | direccion={}",
-                clienteId, estado, desde, hasta, ordenarPor, direccion);
+                        + "desde={} | hasta={} | pagina={} | tamanio={} | "
+                        + "ordenarPor={} | direccion={}",
+                clienteId, estado, desde, hasta,
+                pagina, tamanio, ordenarPor, direccion);
 
         if (desde != null
                 && hasta != null
@@ -145,7 +203,9 @@ public class VentaServiceImpl implements VentaService {
                             + hasta + ")");
         }
 
-        Sort sort = construirSort(ordenarPor, direccion);
+        Pageable pageable = PaginacionUtil.construir(
+                pagina, tamanio, ordenarPor, direccion,
+                CAMPOS_ORDENABLES, ORDEN_POR_DEFECTO);
 
         LocalDateTime desdeHora = (desde == null)
                 ? null
@@ -155,83 +215,26 @@ public class VentaServiceImpl implements VentaService {
                 ? null
                 : hasta.atTime(LocalTime.MAX);
 
-        List<VentaResponseDTO> resultado =
-                ventaRepository
-                        .buscar(clienteId, estado, desdeHora, hastaHora, sort)
-                        .stream()
-                        .map(this::convertirResponse)
-                        .toList();
+        Page<Venta> ventas = ventaRepository
+                .buscar(clienteId, estado, desdeHora, hastaHora, pageable);
+
+        // Segunda consulta: detalles y productos de toda la página de
+        // una vez, en lugar de una consulta por venta al convertir.
+        if (ventas.hasContent()) {
+            ventaRepository.cargarDetalles(ventas.getContent());
+        }
+
+        Page<VentaResponseDTO> resultado =
+                ventas.map(ventaMapper::toResponse);
 
         log.info("Fin buscar ventas | clienteId={} | estado={} | "
                         + "desde={} | hasta={} | orden={} {} | "
-                        + "filas={} | duracionMs={}",
+                        + "filas={} | total={} | duracionMs={}",
                 clienteId, estado, desde, hasta, ordenarPor, direccion,
-                resultado.size(),
+                resultado.getNumberOfElements(),
+                resultado.getTotalElements(),
                 System.currentTimeMillis() - inicio);
 
-        return resultado;
-    }
-
-    private Sort construirSort(String ordenarPor, String direccion) {
-
-        String campo = (ordenarPor == null || ordenarPor.isBlank())
-                ? ORDEN_POR_DEFECTO
-                : ordenarPor.trim();
-
-        if (!CAMPOS_ORDENABLES.contains(campo)) {
-
-            throw new ReglaNegocioException(
-                    "El campo de ordenamiento '"
-                            + campo
-                            + "' no está permitido. Campos válidos: "
-                            + CAMPOS_ORDENABLES);
-        }
-
-        String sentido = (direccion == null || direccion.isBlank())
-                ? "desc"
-                : direccion.trim();
-
-        if (!sentido.equalsIgnoreCase("asc")
-                && !sentido.equalsIgnoreCase("desc")) {
-
-            throw new ReglaNegocioException(
-                    "La dirección de ordenamiento '"
-                            + sentido
-                            + "' no está permitida. Valores válidos: asc, desc");
-        }
-
-        return sentido.equalsIgnoreCase("asc")
-                ? Sort.by(campo).ascending()
-                : Sort.by(campo).descending();
-    }
-
-    private VentaResponseDTO convertirResponse(Venta venta) {
-
-        List<DetalleVentaResponseDTO> detalles =
-                venta.getDetalles()
-                        .stream()
-                        .map(detalle ->
-                                new DetalleVentaResponseDTO(
-                                        detalle.getProducto().getId(),
-                                        detalle.getProducto().getNombre(),
-                                        detalle.getCantidad(),
-                                        detalle.getPrecio(),
-                                        detalle.getSubtotal()
-                                )
-                        ).toList();
-
-        String clienteNombre = venta.getCliente().getNombres()+ " "+ venta.getCliente().getApellidos();
-
-        return new VentaResponseDTO(
-                venta.getId(),
-                venta.getFechaRegistro(),
-                venta.getCliente().getId(),
-                clienteNombre,
-                venta.getEstado().name(),
-                venta.getTotal(),
-                detalles
-        );
-
-
+        return PaginaResponseDTO.de(resultado);
     }
 }

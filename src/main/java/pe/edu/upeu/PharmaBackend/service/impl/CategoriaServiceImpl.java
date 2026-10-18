@@ -2,6 +2,7 @@ package pe.edu.upeu.PharmaBackend.service.impl;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import pe.edu.upeu.PharmaBackend.dto.CategoriaRequestDTO;
@@ -9,98 +10,126 @@ import pe.edu.upeu.PharmaBackend.dto.CategoriaResponseDTO;
 import pe.edu.upeu.PharmaBackend.entity.Categoria;
 import pe.edu.upeu.PharmaBackend.exception.RecursosNoEncontradoException;
 import pe.edu.upeu.PharmaBackend.exception.ReglaNegocioException;
+import pe.edu.upeu.PharmaBackend.mapper.CategoriaMapper;
 import pe.edu.upeu.PharmaBackend.repository.CategoriaRepository;
+import pe.edu.upeu.PharmaBackend.repository.ProductoRepository;
 import pe.edu.upeu.PharmaBackend.service.service.CategoriaService;
 
-import java.util.Optional;
 
 @Service
 public class CategoriaServiceImpl implements CategoriaService {
-    private static final Logger LOG = LoggerFactory.getLogger(CategoriaServiceImpl.class);
+
+    private static final Logger log =
+            LoggerFactory.getLogger(CategoriaServiceImpl.class);
 
     private final CategoriaRepository categoriaRepository;
+    private final ProductoRepository productoRepository;
+    private final CategoriaMapper categoriaMapper;
 
-    public CategoriaServiceImpl(CategoriaRepository categoriaRepository) {
+    public CategoriaServiceImpl(CategoriaRepository categoriaRepository,
+                                ProductoRepository productoRepository,
+                                CategoriaMapper categoriaMapper) {
         this.categoriaRepository = categoriaRepository;
+        this.productoRepository = productoRepository;
+        this.categoriaMapper = categoriaMapper;
     }
 
     @Override
     @Transactional
-    public CategoriaResponseDTO create(CategoriaRequestDTO t) {
-        String nombre = t.getNombre().trim();
+    public CategoriaResponseDTO crear(CategoriaRequestDTO request) {
+        String nombre = request.getNombre().trim();//"Carnes " != "Carnes"
         if(categoriaRepository.existsByNombreIgnoreCase(nombre)){
             throw new ReglaNegocioException(
-                    "Ya existe una categoria con el nombre " + nombre
+                    "Ya existe una categoria con el nomre "+ nombre
             );
         }
 
         Categoria categoria = new Categoria();
         categoria.setNombre(nombre);
-        categoria.setDescripcion(t.getDescripcion());
-        categoria.setEstado(t.getEstado());
+        categoria.setDescripcion(request.getDescripcion());
+        categoria.setEstado(request.getEstado());
 
         Categoria catCreada = categoriaRepository.save(categoria);
 
-        return convertirResponse(catCreada);
+        return categoriaMapper.toResponse(catCreada);
     }
 
     @Override
     @Transactional
-    public CategoriaResponseDTO update(Long aLong, CategoriaRequestDTO t) {
-        Categoria categoria = categoriaRepository.findById(aLong).orElseThrow(()->
+    public CategoriaResponseDTO actualizar(Long id, CategoriaRequestDTO request) {
+        Categoria categoria = categoriaRepository.findById(id).orElseThrow(()->
                 new RecursosNoEncontradoException(
-                        "Categoria no encontrada con id: "+ aLong
+                        "Categoria no encontrada con id: "+ id
                 )
         );
-        categoria.setNombre(t.getNombre());
-        categoria.setDescripcion(t.getDescripcion());
-        categoria.setEstado(t.getEstado());
 
-        Categoria catActualizada = categoriaRepository.save(categoria);
+        String nombre = request.getNombre().trim();
+        if(categoriaRepository.existsByNombreIgnoreCaseAndIdNot(nombre, id)){
+            throw new ReglaNegocioException(
+                    "Ya existe una categoria con el nomre "+ nombre
+            );
+        }
 
-        return convertirResponse(catActualizada);
+        categoria.setNombre(nombre);
+        categoria.setDescripcion(request.getDescripcion());
+        categoria.setEstado(request.getEstado());
+
+        Categoria catActualizada = categoriaRepository.saveAndFlush(categoria);
+
+        return categoriaMapper.toResponse(catActualizada);
     }
 
     @Override
     @Transactional(readOnly = true)
-    public CategoriaResponseDTO read(Long aLong) {
-        Categoria categoria = categoriaRepository.findById(aLong)
+    public CategoriaResponseDTO buscar(Long id) {
+
+        log.info("Buscando categoria | id={}", id);
+
+        Categoria categoria =  categoriaRepository.findById(id)
                 .orElseThrow(()->
                         new RecursosNoEncontradoException(
-                                "Categoria no encontrada con id: "+ aLong
+                                "Categoria no encontrada con id: "+ id
                         )
                 );
-        return convertirResponse(categoria);
+        return categoriaMapper.toResponse(categoria);
     }
 
     @Override
     @Transactional
-    public void delete(Long aLong) {
-        Categoria categoria = categoriaRepository.findById(aLong).orElseThrow(()->
+    public void eliminar(Long id) {
+        Categoria categoria = categoriaRepository.findById(id).orElseThrow(()->
                 new RecursosNoEncontradoException(
-                        "Categoria no encontrada con id: "+ aLong
+                        "Categoria no encontrada con id: "+ id
                 )
         );
+
+        if(productoRepository.existsByCategoriaId(id)){
+            throw new ReglaNegocioException(
+                    "No se puede eliminar la categoria "+ categoria.getNombre()
+                            + " porque tiene productos asociados"
+            );
+        }
+
         categoriaRepository.delete(categoria);
     }
 
     @Override
     @Transactional(readOnly = true)
-    public Iterable<CategoriaResponseDTO> readAll() {
-        return categoriaRepository.findAll()
-                .stream()
-                .map(this::convertirResponse)
-                .toList();
-    }
+    public List<CategoriaResponseDTO> listar() {
 
-    private CategoriaResponseDTO convertirResponse(Categoria categoria){
-        return new CategoriaResponseDTO(
-                categoria.getId(),
-                categoria.getNombre(),
-                categoria.getDescripcion(),
-                categoria.getEstado(),
-                categoria.getFechaCreacion(),
-                categoria.getFechaModificacion()
-        );
+        long inicio = System.currentTimeMillis();
+        log.info("Inicio listar categorias");
+
+        List<CategoriaResponseDTO> resultado =
+                categoriaRepository.findAll()
+                        .stream()
+                        .map(categoriaMapper::toResponse)
+                        .toList();
+
+        log.info("Fin listar categorias | filas={} | duracionMs={}",
+                resultado.size(),
+                System.currentTimeMillis() - inicio);
+
+        return resultado;
     }
 }

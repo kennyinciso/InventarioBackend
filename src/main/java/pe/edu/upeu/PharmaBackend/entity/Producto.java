@@ -5,8 +5,6 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.UpdateTimestamp;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -42,11 +40,20 @@ public class Producto {
     )
     private Categoria categoria;
 
-    @CreationTimestamp
     @Column(name = "fecha_creacion", nullable = false, updatable = false)
     private LocalDateTime fechaCreacion;
 
-    @UpdateTimestamp
     @Column(name = "fecha_modificacion")
     private LocalDateTime fechaModificacion;
+
+    @PrePersist
+    public void prePersist() {
+        this.fechaCreacion = LocalDateTime.now();
+        if(estado==null){
+            estado=true;
+        }
+    }@PreUpdate
+    public void preUpdate() {
+        this.fechaModificacion = LocalDateTime.now();
+    }
 }

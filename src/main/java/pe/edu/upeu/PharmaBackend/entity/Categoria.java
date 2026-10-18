@@ -11,8 +11,7 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "categorias")
-@Getter
-@Setter
+@Getter @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 public class Categoria {
@@ -38,11 +37,13 @@ public class Categoria {
     @PrePersist
     public void prePersist() {
         this.fechaCreacion = LocalDateTime.now();
-        if (estado == null) {
-            estado = true;
+        if(estado==null){
+            estado=true;
         }
     }@PreUpdate
     public void preUpdate() {
         this.fechaModificacion = LocalDateTime.now();
     }
 }
+
+

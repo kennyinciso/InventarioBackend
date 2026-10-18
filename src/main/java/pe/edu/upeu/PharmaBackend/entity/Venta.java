@@ -24,12 +24,8 @@ public class Venta {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(
-            name = "fecha_registro",
-            nullable = false,
-            updatable = false
-    )
-    private LocalDateTime fechaRegistro;
+    @Column(nullable = false)
+    private LocalDateTime fecha;
 
     @Column(nullable = false, precision = 12, scale = 2)
     private BigDecimal total;
@@ -39,7 +35,10 @@ public class Venta {
     private EstadoVenta estado;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "cliente_id", nullable = false)
+    @JoinColumn(
+            name = "cliente_id",
+            nullable = false
+    )
     private Cliente cliente;
 
     @OneToMany(
@@ -51,8 +50,9 @@ public class Venta {
 
     @PrePersist
     public void prePersist() {
-        if (fechaRegistro == null) {
-            fechaRegistro = LocalDateTime.now();
+
+        if (fecha == null) {
+            fecha = LocalDateTime.now();
         }
 
         if (estado == null) {
@@ -64,4 +64,5 @@ public class Venta {
         detalles.add(detalle);
         detalle.setVenta(this);
     }
+
 }

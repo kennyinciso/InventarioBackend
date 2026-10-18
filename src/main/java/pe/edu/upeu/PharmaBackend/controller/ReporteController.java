@@ -6,8 +6,8 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-import pe.edu.upeu.PharmaBackend.dto.ProductoMasVendidoDTO;
-import pe.edu.upeu.PharmaBackend.dto.VentaPorCategoriaDTO;
+import pe.edu.upeu.PharmaBackend.dto.reporte.ProductoMasVendidoDTO;
+import pe.edu.upeu.PharmaBackend.dto.reporte.VentaPorCategoriaDTO;
 import pe.edu.upeu.PharmaBackend.service.service.ReporteService;
 
 import java.time.LocalDate;

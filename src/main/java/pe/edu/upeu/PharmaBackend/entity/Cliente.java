@@ -1,4 +1,6 @@
 package pe.edu.upeu.PharmaBackend.entity;
+
+
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -45,7 +47,7 @@ public class Cliente {
     @Column(name = "fecha_creacion", nullable = false, updatable = false)
     private LocalDateTime fechaCreacion;
 
-    @Column(name = "fecha_modificación")
+    @Column(name = "fecha_modificacion")
     private LocalDateTime fechaModificacion;
 
     @PrePersist

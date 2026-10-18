@@ -1,7 +1,7 @@
 package pe.edu.upeu.PharmaBackend.service.service;
 
-import pe.edu.upeu.PharmaBackend.dto.ProductoMasVendidoDTO;
-import pe.edu.upeu.PharmaBackend.dto.VentaPorCategoriaDTO;
+import pe.edu.upeu.PharmaBackend.dto.reporte.ProductoMasVendidoDTO;
+import pe.edu.upeu.PharmaBackend.dto.reporte.VentaPorCategoriaDTO;
 import java.time.LocalDate;
 import java.util.List;
 

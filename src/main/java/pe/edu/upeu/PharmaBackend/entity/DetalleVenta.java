@@ -50,4 +50,6 @@ public class DetalleVenta {
             scale = 2
     )
     private BigDecimal subtotal;
+
+
 }
