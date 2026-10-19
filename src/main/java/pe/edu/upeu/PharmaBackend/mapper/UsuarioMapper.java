@@ -44,3 +44,19 @@ public class UsuarioMapper {
                 tieneUsuario
         );
     }
+    public RolResponseDTO toRolResponse(Rol rol) {
+        return new RolResponseDTO(
+                rol.getId(),
+                rol.getNombre(),
+                rol.getDescripcion(),
+                PermisosPorRol.permisos(List.of(rol))
+        );
+    }
+
+    public List<String> nombresRoles(Collection<Rol> roles) {
+        return roles.stream()
+                .map(Rol::getNombre)
+                .sorted()
+                .toList();
+    }
+}

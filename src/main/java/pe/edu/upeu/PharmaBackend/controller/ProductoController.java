@@ -1,8 +1,6 @@
 package pe.edu.upeu.PharmaBackend.controller;
 
 import jakarta.validation.Valid;
-import org.springframework.web.bind.annotation.RequestParam;
-import pe.edu.upeu.PharmaBackend.dto.PaginaResponseDTO;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -12,7 +10,9 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import pe.edu.upeu.PharmaBackend.dto.PaginaResponseDTO;
 import pe.edu.upeu.PharmaBackend.dto.ProductoRequestDTO;
 import pe.edu.upeu.PharmaBackend.dto.ProductoResponseDTO;
 import pe.edu.upeu.PharmaBackend.service.service.ProductoService;
@@ -43,7 +43,7 @@ public class ProductoController {
     public ResponseEntity<ProductoResponseDTO> findById(
             @PathVariable Long id) {
 
-        return ResponseEntity.ok(productoService.read(id));
+        return ResponseEntity.ok(productoService.buscar(id));
     }
 
     @PostMapping
@@ -51,7 +51,7 @@ public class ProductoController {
             @Valid @RequestBody ProductoRequestDTO requestDTO) {
 
         ProductoResponseDTO response =
-                productoService.create(requestDTO);
+                productoService.crear(requestDTO);
 
         return ResponseEntity
                 .status(HttpStatus.CREATED)
@@ -64,13 +64,13 @@ public class ProductoController {
             @Valid @RequestBody ProductoRequestDTO requestDTO) {
 
         return ResponseEntity.ok(
-                productoService.update(id, requestDTO)
+                productoService.actualizar(id, requestDTO)
         );
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
-        productoService.delete(id);
+        productoService.eliminar(id);
         return ResponseEntity.noContent().build();
     }
 }
