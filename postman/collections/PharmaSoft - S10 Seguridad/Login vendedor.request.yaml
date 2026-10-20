@@ -1,0 +1,11 @@
+$kind: http-request
+url: "{{baseUrl}}/auth/login"
+method: POST
+body:
+  type: json
+  content: "{ \"username\": \"vendedor\", \"password\": \"Vendedor2026*\" }\r\n"
+scripts:
+  - type: afterResponse
+    code: "pm.collectionVariables.set(\"tokenVendedor\", pm.response.json().token);\r\n"
+    language: text/javascript
+order: 1000

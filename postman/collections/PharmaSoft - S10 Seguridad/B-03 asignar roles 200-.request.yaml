@@ -1,0 +1,12 @@
+$kind: http-request
+name: B-03 asignar roles 200.
+url: "{{baseUrl}}/usuarios/5/roles"
+method: PUT
+body:
+  type: json
+  content: '{ "rolIds": [1, 2] }'
+auth:
+  type: bearer
+  credentials:
+    token: "{{tokenAdmin}}"
+order: 31088

@@ -7,6 +7,10 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import pe.edu.upeu.PharmaBackend.dto.auth.*;
 import pe.edu.upeu.PharmaBackend.service.service.UsuarioService;
+import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PutMapping;
+import pe.edu.upeu.PharmaBackend.dto.auth.AsignarRolesRequestDTO;
 
 import java.util.List;
 
@@ -39,4 +43,17 @@ public class UsuarioController {
     public ResponseEntity<List<RolResponseDTO>> roles() {
         return ResponseEntity.ok(usuarioService.listarRoles());
     }
+    @PutMapping("/{id}/roles")
+    public ResponseEntity<UsuarioResponseDTO> asignarRoles(
+            @PathVariable Long id,
+            @Valid @RequestBody AsignarRolesRequestDTO request,
+            Authentication authentication) {
+        return ResponseEntity.ok(
+                usuarioService.asignarRoles(id, request, authentication.getName()));
+    }
+
+
+
+
 }
+

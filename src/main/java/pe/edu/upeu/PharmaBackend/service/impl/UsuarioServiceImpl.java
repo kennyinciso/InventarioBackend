@@ -20,6 +20,7 @@ import pe.edu.upeu.PharmaBackend.repository.EmpleadoRepository;
 import pe.edu.upeu.PharmaBackend.repository.RolRepository;
 import pe.edu.upeu.PharmaBackend.repository.UsuarioRepository;
 import pe.edu.upeu.PharmaBackend.service.service.UsuarioService;
+import pe.edu.upeu.PharmaBackend.dto.auth.AsignarRolesRequestDTO;
 
 import java.nio.charset.StandardCharsets;
 import java.util.HashSet;
@@ -137,5 +138,42 @@ public class UsuarioServiceImpl implements UsuarioService {
                 .stream()
                 .map(usuarioMapper::toRolResponse)
                 .toList();
+    }
+    @Override
+    @Transactional
+    public UsuarioResponseDTO asignarRoles(Long id, AsignarRolesRequestDTO request,
+                                           String usernameActual) {
+
+        Usuario usuario = usuarioRepository.findById(id)
+                .orElseThrow(() -> new RecursosNoEncontradoException(
+                        "Usuario no encontrado con id: " + id));
+
+        List<Rol> roles = rolRepository.findAllById(request.getRolIds());
+        if (roles.size() != request.getRolIds().size()) {
+            Set<Long> encontrados = roles.stream().map(Rol::getId).collect(Collectors.toSet());
+            Set<Long> faltantes = new HashSet<>(request.getRolIds());
+            faltantes.removeAll(encontrados);
+            throw new RecursosNoEncontradoException("Roles no encontrados: " + faltantes);
+        }
+
+        // Un ADMIN no puede quitarse a si mismo el rol ADMIN
+        boolean esElMismo = usuario.getUsername().equalsIgnoreCase(usernameActual);
+        boolean teniaAdmin = usuario.getRoles().stream()
+                .anyMatch(r -> "ADMIN".equals(r.getNombre()));
+        boolean seQuedaConAdmin = roles.stream()
+                .anyMatch(r -> "ADMIN".equals(r.getNombre()));
+
+        if (esElMismo && teniaAdmin && !seQuedaConAdmin) {
+            throw new ReglaNegocioException(
+                    "Un administrador no puede quitarse a sí mismo el rol ADMIN");
+        }
+
+        usuario.setRoles(new HashSet<>(roles));
+        Usuario guardado = usuarioRepository.save(usuario);
+
+        log.info("Roles actualizados: usuario={} roles={}",
+                guardado.getUsername(), usuarioMapper.nombresRoles(roles));
+
+        return usuarioMapper.toUsuarioResponse(guardado);
     }
 }

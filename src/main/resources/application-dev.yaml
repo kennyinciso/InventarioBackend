@@ -26,4 +26,4 @@ springdoc:
 app:
   jwt:
     secret: c9cda7vCIIYArrAmrh99+g9HoNKFlZWA0Q3LEIInZqYxF7C/3xiufBiRQ2eF7KhL
-    expiracion-minutos: 1
+    expiracion-minutos: 60

@@ -1,0 +1,12 @@
+$kind: http-request
+name: T-01 sin Bearer.
+url: "{{baseUrl}}/productos?pagina=0&tamanio=10&ordenarPor=nombre&direccion=asc"
+method: GET
+headers:
+  Authorization: "{{tokenVendedor}}"
+queryParams:
+  pagina: "0"
+  tamanio: "10"
+  ordenarPor: nombre
+  direccion: asc
+order: 2000

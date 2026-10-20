@@ -1,0 +1,17 @@
+$kind: http-request
+url: "{{baseUrl}}/auth/password"
+method: GET
+body:
+  type: json
+  content: "{\r
+
+    \  \"passwordActual\": \"NuevaClave2026\",\r
+
+    \  \"passwordNueva\": \"Vendedor2026*\"\r
+
+    }"
+auth:
+  type: bearer
+  credentials:
+    token: "{{tokenVendedor}}"
+order: 30000

@@ -12,6 +12,8 @@ import pe.edu.upeu.PharmaBackend.dto.auth.LoginRequestDTO;
 import pe.edu.upeu.PharmaBackend.dto.auth.LoginResponseDTO;
 import pe.edu.upeu.PharmaBackend.dto.auth.UsuarioResponseDTO;
 import pe.edu.upeu.PharmaBackend.service.service.AuthService;
+import org.springframework.web.bind.annotation.PutMapping;
+import pe.edu.upeu.PharmaBackend.dto.auth.CambioPasswordRequestDTO;
 
 @RestController
 @RequestMapping("/api/v1/auth")
@@ -33,4 +35,12 @@ public class AuthController {
     public ResponseEntity<UsuarioResponseDTO> me(Authentication authentication) {
         return ResponseEntity.ok(authService.usuarioActual(authentication.getName()));
     }
+    @PutMapping("/password")
+    public ResponseEntity<Void> cambiarPassword(
+            Authentication authentication,
+            @Valid @RequestBody CambioPasswordRequestDTO request) {
+        authService.cambiarPassword(authentication.getName(), request);
+        return ResponseEntity.noContent().build();
+    }
+
 }

@@ -4,6 +4,7 @@ import pe.edu.upeu.PharmaBackend.dto.auth.EmpleadoResponseDTO;
 import pe.edu.upeu.PharmaBackend.dto.auth.RolResponseDTO;
 import pe.edu.upeu.PharmaBackend.dto.auth.UsuarioRequestDTO;
 import pe.edu.upeu.PharmaBackend.dto.auth.UsuarioResponseDTO;
+import pe.edu.upeu.PharmaBackend.dto.auth.AsignarRolesRequestDTO;
 
 import java.util.List;
 
@@ -16,4 +17,6 @@ public interface UsuarioService {
     List<EmpleadoResponseDTO> listarEmpleados();
 
     List<RolResponseDTO> listarRoles();
+
+    UsuarioResponseDTO asignarRoles(Long id, AsignarRolesRequestDTO request, String usernameActual);
 }
